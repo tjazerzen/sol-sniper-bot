@@ -137,5 +137,3 @@ pnpm-lock.yaml
 
 # Visual Studio Code 
 *.code-workspace
-
-tmp.ts
