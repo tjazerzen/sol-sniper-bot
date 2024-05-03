@@ -14,7 +14,7 @@ import {
   RPC_WEBSOCKET_ENDPOINT,
   PRE_LOAD_EXISTING_MARKETS,
   LOG_LEVEL,
-  CHECK_IF_MUTABLE,
+  // CHECK_IF_MUTABLE,
   CHECK_IF_MINT_IS_RENOUNCED,
   CHECK_IF_FREEZABLE,
   CHECK_IF_BURNED,
@@ -45,11 +45,11 @@ import {
   FILTER_CHECK_INTERVAL,
   FILTER_CHECK_DURATION,
   CONSECUTIVE_FILTER_MATCHES,
-  TRANSACTION_FEE_WALLET,
+  // TRANSACTION_FEE_WALLET,
   RUGCHECK_XYZ_CHECK,
   RUGCHECK_XYZ_MAX_SCORE,
 } from './helpers';
-import { version } from './package.json';
+// import { version } from './package.json';
 import { DzekiTransactionExecutor } from './transactions/dzeki-transaction-executor';
 
 const connection = new Connection(RPC_ENDPOINT, {

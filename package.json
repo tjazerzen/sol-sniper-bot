@@ -5,7 +5,8 @@
   "scripts": {
     "start": "ts-node index.ts",
     "tsc": "tsc --noEmit",
-    "test-script": "ts-node tmp.ts"
+    "test-script": "ts-node tmp.ts",
+    "lint": "eslint . --ext .ts"
   },
   "dependencies": {
     "@metaplex-foundation/mpl-token-metadata": "^3.2.1",
@@ -28,6 +29,10 @@
   },
   "devDependencies": {
     "@types/bn.js": "^5.1.5",
+    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "@typescript-eslint/parser": "^7.8.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-sonarjs": "^1.0.0",
     "prettier": "^3.2.4",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
