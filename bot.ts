@@ -22,6 +22,8 @@ import { createPoolKeys, logger, NETWORK, sleep } from './helpers';
 import { Mutex } from 'async-mutex';
 import BN from 'bn.js';
 import { DzekiTransactionExecutor } from './transactions/dzeki-transaction-executor';
+import axios from 'axios';
+import { RugcheckXyzReport } from './bot.types';
 
 export interface BotConfig {
   wallet: Keypair;
@@ -51,6 +53,8 @@ export interface BotConfig {
   filterCheckInterval: number;
   filterCheckDuration: number;
   consecutiveMatchCount: number;
+  rugcheckXyzCheck: boolean;
+  rugcheckXyzMaxScore: number;
 }
 
 export class Bot {
@@ -122,6 +126,24 @@ export class Bot {
       }
 
       await this.mutex.acquire();
+    }
+
+    if (this.config.rugcheckXyzCheck) {
+      const axiosReponse = await axios.get(
+        `https://api.rugcheck.xyz/v1/tokens/${poolState.baseMint.toString()}/report`,
+      );
+      const rugcheckReport: RugcheckXyzReport = axiosReponse.data;
+      if (rugcheckReport.score > this.config.rugcheckXyzMaxScore) {
+        logger.debug(
+          { mint: poolState.baseMint.toString(), rugcheckScore: rugcheckReport.score },
+          `Skipping buy because token has a high rugcheck.xyz score`,
+        );
+        return;
+      }
+      logger.debug(
+        { mint: poolState.baseMint.toString(), rugcheckScore: rugcheckReport.score },
+        `Rugcheck score is ok`,
+      );
     }
 
     try {

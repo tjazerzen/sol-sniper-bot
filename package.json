@@ -4,7 +4,8 @@
   "version": "2.0.1",
   "scripts": {
     "start": "ts-node index.ts",
-    "tsc": "tsc --noEmit"
+    "tsc": "tsc --noEmit",
+    "test-script": "ts-node tmp.ts"
   },
   "dependencies": {
     "@metaplex-foundation/mpl-token-metadata": "^3.2.1",

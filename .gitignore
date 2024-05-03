@@ -135,5 +135,8 @@ pnpm-lock.yaml
 # JetBrains
 .idea
 
-# Visual Studio Code 
+# Visual Studio Code
 *.code-workspace
+
+# Temporary files
+tmp.ts

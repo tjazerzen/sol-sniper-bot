@@ -63,3 +63,7 @@ export const MIN_POOL_SIZE = retrieveEnvVariable('MIN_POOL_SIZE', logger);
 export const MAX_POOL_SIZE = retrieveEnvVariable('MAX_POOL_SIZE', logger);
 export const USE_SNIPE_LIST = retrieveEnvVariable('USE_SNIPE_LIST', logger) === 'true';
 export const SNIPE_LIST_REFRESH_INTERVAL = Number(retrieveEnvVariable('SNIPE_LIST_REFRESH_INTERVAL', logger));
+
+// Rugcheck
+export const RUGCHECK_XYZ_CHECK = retrieveEnvVariable('RUGCHECK_XYZ_CHECK', logger) === 'true';
+export const RUGCHECK_XYZ_MAX_SCORE = Number(retrieveEnvVariable('RUGCHECK_XYZ_MAX_SCORE', logger));

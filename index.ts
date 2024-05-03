@@ -46,6 +46,8 @@ import {
   FILTER_CHECK_DURATION,
   CONSECUTIVE_FILTER_MATCHES,
   TRANSACTION_FEE_WALLET,
+  RUGCHECK_XYZ_CHECK,
+  RUGCHECK_XYZ_MAX_SCORE,
 } from './helpers';
 import { version } from './package.json';
 import { DzekiTransactionExecutor } from './transactions/dzeki-transaction-executor';
@@ -168,6 +170,8 @@ const runListener = async () => {
     filterCheckInterval: FILTER_CHECK_INTERVAL,
     filterCheckDuration: FILTER_CHECK_DURATION,
     consecutiveMatchCount: CONSECUTIVE_FILTER_MATCHES,
+    rugcheckXyzCheck: RUGCHECK_XYZ_CHECK,
+    rugcheckXyzMaxScore: RUGCHECK_XYZ_MAX_SCORE,
   };
 
   const bot = new Bot(connection, marketCache, poolCache, txExecutor, botConfig);
