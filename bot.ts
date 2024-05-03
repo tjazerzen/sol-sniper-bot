@@ -129,21 +129,28 @@ export class Bot {
     }
 
     if (this.config.rugcheckXyzCheck) {
-      const axiosReponse = await axios.get(
-        `https://api.rugcheck.xyz/v1/tokens/${poolState.baseMint.toString()}/report`,
-      );
-      const rugcheckReport: RugcheckXyzReport = axiosReponse.data;
-      if (rugcheckReport.score > this.config.rugcheckXyzMaxScore) {
+      try {
+        const axiosReponse = await axios.get(
+          `https://api.rugcheck.xyz/v1/tokens/${poolState.baseMint.toString()}/report`,
+        );
+        const rugcheckReport: RugcheckXyzReport = axiosReponse.data;
+        if (rugcheckReport.score > this.config.rugcheckXyzMaxScore) {
+          logger.debug(
+            { mint: poolState.baseMint.toString(), rugcheckScore: rugcheckReport.score },
+            `Skipping buy because token has a high rugcheck.xyz score`,
+          );
+          return;
+        }
         logger.debug(
           { mint: poolState.baseMint.toString(), rugcheckScore: rugcheckReport.score },
-          `Skipping buy because token has a high rugcheck.xyz score`,
+          `Rugcheck score is ok`,
         );
-        return;
+      } catch (error) {
+        logger.error(
+          { mint: poolState.baseMint.toString() },
+          `Error fetching rugcheck.xyz report. Ignoring rugcheck threshold score check.`,
+        );
       }
-      logger.debug(
-        { mint: poolState.baseMint.toString(), rugcheckScore: rugcheckReport.score },
-        `Rugcheck score is ok`,
-      );
     }
 
     try {
