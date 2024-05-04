@@ -42,9 +42,6 @@ import {
   SNIPE_LIST_REFRESH_INTERVAL,
   TRANSACTION_EXECUTOR,
   CUSTOM_FEE,
-  FILTER_CHECK_INTERVAL,
-  FILTER_CHECK_DURATION,
-  CONSECUTIVE_FILTER_MATCHES,
   // TRANSACTION_FEE_WALLET,
   RUGCHECK_XYZ_CHECK,
   RUGCHECK_XYZ_MAX_SCORE,
@@ -106,9 +103,6 @@ function printDetails(wallet: Keypair, quoteToken: Token, bot: Bot) {
     logger.info(`Filters are disabled when snipe list is on`);
   } else {
     logger.info('- Filters -');
-    logger.info(`Filter check interval: ${botConfig.filterCheckInterval} ms`);
-    logger.info(`Filter check duration: ${botConfig.filterCheckDuration} ms`);
-    logger.info(`Consecutive filter matches: ${botConfig.consecutiveMatchCount}`);
     logger.info(`Check renounced: ${botConfig.checkRenounced}`);
     logger.info(`Check freezable: ${botConfig.checkFreezable}`);
     logger.info(`Check burned: ${botConfig.checkBurned}`);
@@ -167,9 +161,6 @@ const runListener = async () => {
     sellSlippage: SELL_SLIPPAGE,
     priceCheckInterval: PRICE_CHECK_INTERVAL,
     priceCheckDuration: PRICE_CHECK_DURATION,
-    filterCheckInterval: FILTER_CHECK_INTERVAL,
-    filterCheckDuration: FILTER_CHECK_DURATION,
-    consecutiveMatchCount: CONSECUTIVE_FILTER_MATCHES,
     rugcheckXyzCheck: RUGCHECK_XYZ_CHECK,
     rugcheckXyzMaxScore: RUGCHECK_XYZ_MAX_SCORE,
   };
