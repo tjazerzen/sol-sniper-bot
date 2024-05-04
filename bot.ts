@@ -30,8 +30,8 @@ import { createPoolKeys, logger, NETWORK, sleep } from './helpers';
 import { Mutex } from 'async-mutex';
 import BN from 'bn.js';
 import { DzekiTransactionExecutor } from './transactions/dzeki-transaction-executor';
-import axios from 'axios';
-import { RugcheckXyzReport } from './bot.types';
+// import axios from 'axios';
+// import { RugcheckXyzReport } from './bot.types';
 
 type PriceMatchResponse =
   | {
