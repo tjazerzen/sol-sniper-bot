@@ -251,52 +251,58 @@ export class Bot {
       const poolKeys: LiquidityPoolKeysV4 = createPoolKeys(new PublicKey(poolData.id), poolData.state, market);
 
       const valueCalculation = await this.priceMatch(tokenAmountIn, poolKeys);
-      // if (!valueCalculation.toSell) {
+      if (valueCalculation.toSell) {
+        logger.info(
+          {
+            mint: rawAccount.mint.toString(),
+            reason: valueCalculation.reason,
+            amountOut: valueCalculation.amountOut,
+          },
+          `Selling token...`,
+        );
+        for (let i = 0; i < this.config.maxSellRetries; i++) {
+          try {
+            logger.info(
+              { mint: rawAccount.mint },
+              `Send sell transaction attempt: ${i + 1}/${this.config.maxSellRetries}`,
+            );
 
-      // }
+            const result = await this.swap(
+              poolKeys,
+              accountId,
+              this.config.quoteAta,
+              tokenIn,
+              this.config.quoteToken,
+              tokenAmountIn,
+              this.config.sellSlippage,
+              this.config.wallet,
+              'sell',
+            );
 
-      for (let i = 0; i < this.config.maxSellRetries; i++) {
-        try {
-          logger.info(
-            { mint: rawAccount.mint },
-            `Send sell transaction attempt: ${i + 1}/${this.config.maxSellRetries}`,
-          );
+            if (result.confirmed) {
+              logger.info(
+                {
+                  dex: `https://dexscreener.com/solana/${rawAccount.mint.toString()}?maker=${this.config.wallet.publicKey}`,
+                  mint: rawAccount.mint.toString(),
+                  signature: result.signature,
+                  url: `https://solscan.io/tx/${result.signature}?cluster=${NETWORK}`,
+                },
+                `Confirmed sell tx`,
+              );
+              break;
+            }
 
-          const result = await this.swap(
-            poolKeys,
-            accountId,
-            this.config.quoteAta,
-            tokenIn,
-            this.config.quoteToken,
-            tokenAmountIn,
-            this.config.sellSlippage,
-            this.config.wallet,
-            'sell',
-          );
-
-          if (result.confirmed) {
             logger.info(
               {
-                dex: `https://dexscreener.com/solana/${rawAccount.mint.toString()}?maker=${this.config.wallet.publicKey}`,
                 mint: rawAccount.mint.toString(),
                 signature: result.signature,
-                url: `https://solscan.io/tx/${result.signature}?cluster=${NETWORK}`,
+                error: result.error,
               },
-              `Confirmed sell tx`,
+              `Error confirming sell tx`,
             );
-            break;
+          } catch (error) {
+            logger.debug({ mint: rawAccount.mint.toString(), error }, `Error confirming sell transaction`);
           }
-
-          logger.info(
-            {
-              mint: rawAccount.mint.toString(),
-              signature: result.signature,
-              error: result.error,
-            },
-            `Error confirming sell tx`,
-          );
-        } catch (error) {
-          logger.debug({ mint: rawAccount.mint.toString(), error }, `Error confirming sell transaction`);
         }
       }
     } catch (error) {
