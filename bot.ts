@@ -14,7 +14,15 @@ import {
   RawAccount,
   TOKEN_PROGRAM_ID,
 } from '@solana/spl-token';
-import { Liquidity, LiquidityPoolKeysV4, LiquidityStateV4, Percent, Token, TokenAmount } from '@raydium-io/raydium-sdk';
+import {
+  CurrencyAmount,
+  Liquidity,
+  LiquidityPoolKeysV4,
+  LiquidityStateV4,
+  Percent,
+  Token,
+  TokenAmount,
+} from '@raydium-io/raydium-sdk';
 import { MarketCache, PoolCache, SnipeListCache } from './cache';
 import { PoolFilters } from './filters';
 import { TransactionExecutor } from './transactions';
@@ -24,6 +32,16 @@ import BN from 'bn.js';
 import { DzekiTransactionExecutor } from './transactions/dzeki-transaction-executor';
 import axios from 'axios';
 import { RugcheckXyzReport } from './bot.types';
+
+type PriceMatchResponse =
+  | {
+      action: 'sell';
+      reason: 'stopLoss' | 'takeProfit';
+      amountOut: TokenAmount | CurrencyAmount;
+    }
+  | {
+      action: 'no-sell';
+    };
 
 export interface BotConfig {
   wallet: Keypair;
@@ -250,16 +268,9 @@ export class Bot {
       const market = await this.marketStorage.get(poolData.state.marketId.toString());
       const poolKeys: LiquidityPoolKeysV4 = createPoolKeys(new PublicKey(poolData.id), poolData.state, market);
 
-      const valueCalculation = await this.priceMatch(tokenAmountIn, poolKeys);
-      if (valueCalculation.toSell) {
-        logger.info(
-          {
-            mint: rawAccount.mint.toString(),
-            reason: valueCalculation.reason,
-            amountOut: valueCalculation.amountOut,
-          },
-          `Selling token...`,
-        );
+      const priceMatchResponse = await this.priceMatch(tokenAmountIn, poolKeys);
+      if (priceMatchResponse.action == 'sell') {
+        logger.info({ mint: rawAccount.mint.toString(), priceMatchResponse }, `Matched the price, executing sale...`);
         for (let i = 0; i < this.config.maxSellRetries; i++) {
           try {
             logger.info(
@@ -304,6 +315,8 @@ export class Bot {
             logger.debug({ mint: rawAccount.mint.toString(), error }, `Error confirming sell transaction`);
           }
         }
+      } else {
+        logger.info({ mint: rawAccount.mint.toString(), priceMatchResponse }, `Price doesn't match, skipping sell...`);
       }
     } catch (error) {
       logger.error({ mint: rawAccount.mint.toString(), error }, `Failed to sell token`);
@@ -390,7 +403,7 @@ export class Bot {
     return await this.poolFilters.execute(poolKeys);
   }
 
-  private async priceMatch(amountIn: TokenAmount, poolKeys: LiquidityPoolKeysV4) {
+  private async priceMatch(amountIn: TokenAmount, poolKeys: LiquidityPoolKeysV4): Promise<PriceMatchResponse> {
     // const timesToCheck = this.config.priceCheckDuration / this.config.priceCheckInterval;
     const profitFraction = this.config.quoteAmount.mul(this.config.takeProfit).numerator.div(new BN(100));
     const profitAmount = new TokenAmount(this.config.quoteToken, profitFraction, true);
@@ -416,14 +429,14 @@ export class Bot {
         `Take profit: ${takeProfit.toFixed()} | Stop loss: ${stopLoss.toFixed()} | Current: ${amountOut.toFixed()}`,
       );
       if (amountOut.lt(stopLoss)) {
-        return { toSell: true, reason: 'stopLoss', amountOut };
+        return { action: 'sell', reason: 'stopLoss', amountOut };
       }
       if (amountOut.gt(takeProfit)) {
-        return { toSell: true, reason: 'takeProfit', amountOut };
+        return { action: 'sell', reason: 'takeProfit', amountOut };
       }
     } catch (e) {
       logger.trace({ mint: poolKeys.baseMint.toString(), e }, `Failed to check token price`);
     }
-    return { toSell: false, reason: 'none' };
+    return { action: 'no-sell' };
   }
 }
