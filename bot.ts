@@ -143,7 +143,7 @@ export class Bot {
           `Rugcheck score is ok`,
         );
       } catch (error) {
-        logger.error(
+        logger.info(
           { mint: poolState.baseMint.toString() },
           `Error fetching rugcheck.xyz report. Ignoring rugcheck threshold score check.`,
         );
@@ -165,6 +165,8 @@ export class Bot {
           return;
         }
       }
+
+      logger.info({ mint: poolState.baseMint.toString() }, `Processing buy...`);
 
       for (let i = 0; i < this.config.maxBuyRetries; i++) {
         try {
