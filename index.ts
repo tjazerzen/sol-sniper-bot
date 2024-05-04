@@ -87,8 +87,6 @@ function printDetails(wallet: Keypair, quoteToken: Token, bot: Bot) {
   logger.info(`Auto sell delay: ${botConfig.autoSellDelay} ms`);
   logger.info(`Max sell retries: ${botConfig.maxSellRetries}`);
   logger.info(`Sell slippage: ${botConfig.sellSlippage}%`);
-  logger.info(`Price check interval: ${botConfig.priceCheckInterval} ms`);
-  logger.info(`Price check duration: ${botConfig.priceCheckDuration} ms`);
   logger.info(`Take profit: ${botConfig.takeProfit}%`);
   logger.info(`Stop loss: ${botConfig.stopLoss}%`);
 
