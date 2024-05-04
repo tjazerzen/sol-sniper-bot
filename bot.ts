@@ -48,8 +48,6 @@ export interface BotConfig {
   stopLoss: number;
   buySlippage: number;
   sellSlippage: number;
-  priceCheckInterval: number;
-  priceCheckDuration: number;
   rugcheckXyzCheck: boolean;
   rugcheckXyzMaxScore: number;
 }
@@ -125,23 +123,21 @@ export class Bot {
       await this.mutex.acquire();
     }
 
+    let rugcheckScore: number = -1;
     if (this.config.rugcheckXyzCheck) {
       try {
         const axiosReponse = await axios.get(
           `https://api.rugcheck.xyz/v1/tokens/${poolState.baseMint.toString()}/report`,
         );
         const rugcheckReport: RugcheckXyzReport = axiosReponse.data;
-        if (rugcheckReport.score > this.config.rugcheckXyzMaxScore) {
-          logger.debug(
-            { mint: poolState.baseMint.toString(), rugcheckScore: rugcheckReport.score },
+        rugcheckScore = rugcheckReport.score;
+        if (rugcheckScore > this.config.rugcheckXyzMaxScore) {
+          logger.info(
+            { mint: poolState.baseMint.toString(), rugcheckScore },
             `Skipping buy because token has a high rugcheck.xyz score`,
           );
           return;
         }
-        logger.debug(
-          { mint: poolState.baseMint.toString(), rugcheckScore: rugcheckReport.score },
-          `Rugcheck score is ok`,
-        );
       } catch (error) {
         logger.info(
           { mint: poolState.baseMint.toString() },
@@ -149,6 +145,8 @@ export class Bot {
         );
       }
     }
+
+    logger.info({ mint: poolState.baseMint.toString(), rugcheckScore }, `Rugcheck score is ok. Continuing...`);
 
     try {
       const [market, mintAta] = await Promise.all([
@@ -252,7 +250,10 @@ export class Bot {
       const market = await this.marketStorage.get(poolData.state.marketId.toString());
       const poolKeys: LiquidityPoolKeysV4 = createPoolKeys(new PublicKey(poolData.id), poolData.state, market);
 
-      await this.priceMatch(tokenAmountIn, poolKeys);
+      const valueCalculation = await this.priceMatch(tokenAmountIn, poolKeys);
+      // if (!valueCalculation.toSell) {
+
+      // }
 
       for (let i = 0; i < this.config.maxSellRetries; i++) {
         try {
@@ -384,55 +385,39 @@ export class Bot {
   }
 
   private async priceMatch(amountIn: TokenAmount, poolKeys: LiquidityPoolKeysV4) {
-    if (this.config.priceCheckDuration === 0 || this.config.priceCheckInterval === 0) {
-      return;
-    }
-
-    const timesToCheck = this.config.priceCheckDuration / this.config.priceCheckInterval;
+    // const timesToCheck = this.config.priceCheckDuration / this.config.priceCheckInterval;
     const profitFraction = this.config.quoteAmount.mul(this.config.takeProfit).numerator.div(new BN(100));
     const profitAmount = new TokenAmount(this.config.quoteToken, profitFraction, true);
     const takeProfit = this.config.quoteAmount.add(profitAmount);
-
     const lossFraction = this.config.quoteAmount.mul(this.config.stopLoss).numerator.div(new BN(100));
     const lossAmount = new TokenAmount(this.config.quoteToken, lossFraction, true);
     const stopLoss = this.config.quoteAmount.subtract(lossAmount);
     const slippage = new Percent(this.config.sellSlippage, 100);
-    let timesChecked = 0;
-
-    do {
-      try {
-        const poolInfo = await Liquidity.fetchInfo({
-          connection: this.connection,
-          poolKeys,
-        });
-
-        const amountOut = Liquidity.computeAmountOut({
-          poolKeys,
-          poolInfo,
-          amountIn: amountIn,
-          currencyOut: this.config.quoteToken,
-          slippage,
-        }).amountOut;
-
-        logger.debug(
-          { mint: poolKeys.baseMint.toString() },
-          `Take profit: ${takeProfit.toFixed()} | Stop loss: ${stopLoss.toFixed()} | Current: ${amountOut.toFixed()}`,
-        );
-
-        if (amountOut.lt(stopLoss)) {
-          break;
-        }
-
-        if (amountOut.gt(takeProfit)) {
-          break;
-        }
-
-        await sleep(this.config.priceCheckInterval);
-      } catch (e) {
-        logger.trace({ mint: poolKeys.baseMint.toString(), e }, `Failed to check token price`);
-      } finally {
-        timesChecked++;
+    try {
+      const poolInfo = await Liquidity.fetchInfo({
+        connection: this.connection,
+        poolKeys,
+      });
+      const amountOut = Liquidity.computeAmountOut({
+        poolKeys,
+        poolInfo,
+        amountIn: amountIn,
+        currencyOut: this.config.quoteToken,
+        slippage,
+      }).amountOut;
+      logger.debug(
+        { mint: poolKeys.baseMint.toString() },
+        `Take profit: ${takeProfit.toFixed()} | Stop loss: ${stopLoss.toFixed()} | Current: ${amountOut.toFixed()}`,
+      );
+      if (amountOut.lt(stopLoss)) {
+        return { toSell: true, reason: 'stopLoss', amountOut };
       }
-    } while (timesChecked < timesToCheck);
+      if (amountOut.gt(takeProfit)) {
+        return { toSell: true, reason: 'takeProfit', amountOut };
+      }
+    } catch (e) {
+      logger.trace({ mint: poolKeys.baseMint.toString(), e }, `Failed to check token price`);
+    }
+    return { toSell: false, reason: 'none' };
   }
 }

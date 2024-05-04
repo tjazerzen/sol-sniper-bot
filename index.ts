@@ -37,8 +37,6 @@ import {
   STOP_LOSS,
   BUY_SLIPPAGE,
   SELL_SLIPPAGE,
-  PRICE_CHECK_DURATION,
-  PRICE_CHECK_INTERVAL,
   SNIPE_LIST_REFRESH_INTERVAL,
   TRANSACTION_EXECUTOR,
   CUSTOM_FEE,
@@ -159,8 +157,6 @@ const runListener = async () => {
     stopLoss: STOP_LOSS,
     buySlippage: BUY_SLIPPAGE,
     sellSlippage: SELL_SLIPPAGE,
-    priceCheckInterval: PRICE_CHECK_INTERVAL,
-    priceCheckDuration: PRICE_CHECK_DURATION,
     rugcheckXyzCheck: RUGCHECK_XYZ_CHECK,
     rugcheckXyzMaxScore: RUGCHECK_XYZ_MAX_SCORE,
   };
