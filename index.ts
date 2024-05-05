@@ -14,7 +14,6 @@ import {
   RPC_WEBSOCKET_ENDPOINT,
   PRE_LOAD_EXISTING_MARKETS,
   LOG_LEVEL,
-  // CHECK_IF_MUTABLE,
   CHECK_IF_MINT_IS_RENOUNCED,
   CHECK_IF_FREEZABLE,
   CHECK_IF_BURNED,
@@ -38,14 +37,13 @@ import {
   SELL_SLIPPAGE,
   SNIPE_LIST_REFRESH_INTERVAL,
   TRANSACTION_EXECUTOR,
-  CUSTOM_FEE,
-  // TRANSACTION_FEE_WALLET,
   RUGCHECK_XYZ_CHECK,
   RUGCHECK_XYZ_MAX_SCORE,
   TAKE_PROFIT_1_AFTER_GAIN,
   TAKE_PROFIT_2_AFTER_GAIN,
   TAKE_PROFIT_1_PERCENTAGE,
   TAKE_PROFIT_2_PERCENTAGE,
+  TAKE_PROFIT_FEE_PERCENTAGE,
 } from './helpers';
 // import { version } from './package.json';
 import { DzekiTransactionExecutor } from './transactions/dzeki-transaction-executor';
@@ -66,12 +64,8 @@ function printDetails(wallet: Keypair, quoteToken: Token, bot: Bot) {
   logger.info(
     `Using ${TRANSACTION_EXECUTOR} executer: ${bot.isDzeki || (TRANSACTION_EXECUTOR === 'default' ? true : false)}`,
   );
-  if (bot.isDzeki) {
-    logger.info(`${TRANSACTION_EXECUTOR} fee: ${CUSTOM_FEE}`);
-  } else {
-    logger.info(`Compute Unit limit: ${botConfig.unitLimit}`);
-    logger.info(`Compute Unit price (micro lamports): ${botConfig.unitPrice}`);
-  }
+  logger.info(`Compute Unit limit: ${botConfig.unitLimit}`);
+  logger.info(`Compute Unit price (micro lamports): ${botConfig.unitPrice}`);
 
   logger.info(`Single token at the time: ${botConfig.oneTokenAtATime}`);
   logger.info(`Pre load existing markets: ${PRE_LOAD_EXISTING_MARKETS}`);
@@ -161,6 +155,7 @@ const runListener = async () => {
     takeProfit1Percentage: TAKE_PROFIT_1_PERCENTAGE,
     takeProfit2AfterGain: TAKE_PROFIT_2_AFTER_GAIN,
     takeProfit2Percentage: TAKE_PROFIT_2_PERCENTAGE,
+    takeProfitFeePercentage: TAKE_PROFIT_FEE_PERCENTAGE,
     stopLoss: STOP_LOSS,
     buySlippage: BUY_SLIPPAGE,
     sellSlippage: SELL_SLIPPAGE,

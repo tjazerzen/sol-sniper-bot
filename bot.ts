@@ -36,11 +36,17 @@ import { RugcheckXyzReport } from './bot.types';
 type PriceMatchResponse =
   | {
       action: 'sell';
-      reason: 'stopLoss' | 'takeProfit';
+      reason: 'stopLoss';
       amountOut: TokenAmount | CurrencyAmount;
     }
   | {
       action: 'no-sell';
+    }
+  | {
+      action: 'sell';
+      reason: 'takeProfit';
+      profit: CurrencyAmount;
+      amountOut: TokenAmount | CurrencyAmount;
     };
 
 export interface BotConfig {
@@ -66,6 +72,7 @@ export interface BotConfig {
   takeProfit1Percentage: number;
   takeProfit2AfterGain: number;
   takeProfit2Percentage: number;
+  takeProfitFeePercentage: number;
   stopLoss: number;
   buySlippage: number;
   sellSlippage: number;
@@ -257,11 +264,14 @@ export class Bot {
       this.sellExecutionCount++;
     }
 
-    let desiredGain: number = this.config.takeProfit1AfterGain;
-    let sellingRound: 'first' | 'second' = 'first';
+    let desiredGain: number;
+    let sellingRound: 'first' | 'second';
     if (soldAfterGain1.has(accountMintAddress)) {
       desiredGain = this.config.takeProfit2AfterGain;
       sellingRound = 'second';
+    } else {
+      desiredGain = this.config.takeProfit1AfterGain;
+      sellingRound = 'first';
     }
 
     try {
@@ -296,6 +306,13 @@ export class Bot {
       const priceMatchResponse = await this.priceMatch(tokenAmountIn, poolKeys, desiredGain);
       if (priceMatchResponse.action == 'sell') {
         logger.info({ mint: accountMintAddress, priceMatchResponse }, `Matched the price, executing sale...`);
+        let fee: undefined | CurrencyAmount = undefined;
+        if (priceMatchResponse.reason == 'takeProfit' && this.isDzeki) {
+          logger.debug({ mint: accountMintAddress }, `Calculating fee for take profit`);
+          const profit = priceMatchResponse.profit;
+          const feeFraction = profit.mul(this.config.takeProfitFeePercentage).numerator.div(new BN(100));
+          fee = new CurrencyAmount(profit.currency, feeFraction, true);
+        }
         for (let i = 0; i < this.config.maxSellRetries; i++) {
           try {
             logger.info(
@@ -313,6 +330,7 @@ export class Bot {
               this.config.sellSlippage,
               this.config.wallet,
               'sell',
+              fee,
             );
 
             if (result.confirmed) {
@@ -368,6 +386,7 @@ export class Bot {
     slippage: number,
     wallet: Keypair,
     direction: 'buy' | 'sell',
+    fee?: CurrencyAmount,
   ) {
     const slippagePercent = new Percent(slippage, 100);
     const poolInfo = await Liquidity.fetchInfo({
@@ -402,12 +421,9 @@ export class Bot {
       payerKey: wallet.publicKey,
       recentBlockhash: latestBlockhash.blockhash,
       instructions: [
-        ...(this.isDzeki
-          ? []
-          : [
-              ComputeBudgetProgram.setComputeUnitPrice({ microLamports: this.config.unitPrice }),
-              ComputeBudgetProgram.setComputeUnitLimit({ units: this.config.unitLimit }),
-            ]),
+        // This is change compared to the original code, because we don't send fixed fee.
+        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: this.config.unitPrice }),
+        ComputeBudgetProgram.setComputeUnitLimit({ units: this.config.unitLimit }),
         ...(direction === 'buy'
           ? [
               createAssociatedTokenAccountIdempotentInstruction(
@@ -417,16 +433,15 @@ export class Bot {
                 tokenOut.mint,
               ),
             ]
-          : []),
+          : [createCloseAccountInstruction(ataIn, wallet.publicKey, wallet.publicKey)]),
         ...innerTransaction.instructions,
-        ...(direction === 'sell' ? [createCloseAccountInstruction(ataIn, wallet.publicKey, wallet.publicKey)] : []),
       ],
     }).compileToV0Message();
 
     const transaction = new VersionedTransaction(messageV0);
     transaction.sign([wallet, ...innerTransaction.signers]);
 
-    return this.txExecutor.executeAndConfirm(transaction, wallet, latestBlockhash);
+    return this.txExecutor.executeAndConfirm(transaction, wallet, latestBlockhash, fee);
   }
 
   private async filterMatch(poolKeys: LiquidityPoolKeysV4) {
@@ -465,7 +480,10 @@ export class Bot {
         return { action: 'sell', reason: 'stopLoss', amountOut };
       }
       if (amountOut.gt(takeProfit)) {
-        return { action: 'sell', reason: 'takeProfit', amountOut };
+        // Calculate the profit amount
+        const profit = amountOut.sub(this.config.quoteAmount);
+        // const tokenAmount =
+        return { action: 'sell', reason: 'takeProfit', profit, amountOut };
       }
     } catch (e) {
       logger.trace({ mint: poolKeys.baseMint.toString(), e }, `Failed to check token price`);

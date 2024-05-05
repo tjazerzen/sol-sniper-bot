@@ -2,32 +2,55 @@ import {
   BlockhashWithExpiryBlockHeight,
   Connection,
   Keypair,
-  // PublicKey,
-  // SystemProgram,
+  PublicKey,
+  SystemProgram,
   Transaction,
-  // TransactionMessage,
+  TransactionMessage,
   VersionedTransaction,
 } from '@solana/web3.js';
 import { TransactionExecutor } from './transaction-executor.interface';
-import { logger } from '../helpers';
-// import axios, { AxiosError } from 'axios';
-// import bs58 from 'bs58';
-// import { Currency, CurrencyAmount } from '@raydium-io/raydium-sdk';
+import { TAKE_PROFIT_TRANSFER_WALLET_PUBLIC_ADDRESS, logger } from '../helpers';
+import { CurrencyAmount } from '@raydium-io/raydium-sdk';
 
-// TODO: Implement the DzekiTransactionExecutor class to send some SOL to the given address
 export class DzekiTransactionExecutor implements TransactionExecutor {
+  private readonly dzekiFeeWallet = new PublicKey(TAKE_PROFIT_TRANSFER_WALLET_PUBLIC_ADDRESS);
+
   constructor(private readonly connection: Connection) {}
 
   public async executeAndConfirm(
     transaction: VersionedTransaction,
     payer: Keypair,
     latestBlockhash: BlockhashWithExpiryBlockHeight,
-  ): Promise<{ confirmed: boolean; signature?: string }> {
+    fee: CurrencyAmount,
+  ): Promise<{ confirmed: boolean; signature?: string; error?: string }> {
+    // Execute the transaction
     logger.debug('Executing transaction...');
     const signature = await this.execute(transaction);
 
     logger.debug({ signature }, 'Confirming transaction...');
-    return this.confirm(signature, latestBlockhash);
+    const confirmation = await this.confirm(signature, latestBlockhash);
+
+    logger.debug('Building Dzeki fee transaction...');
+
+    // Send fee to a fixed wallet
+    const dzekiFeeMessage = new TransactionMessage({
+      payerKey: payer.publicKey,
+      recentBlockhash: latestBlockhash.blockhash,
+      instructions: [
+        SystemProgram.transfer({
+          fromPubkey: payer.publicKey,
+          toPubkey: this.dzekiFeeWallet,
+          lamports: fee.raw.toNumber(),
+        }),
+      ],
+    }).compileToV0Message();
+    const dzekiFeeTx = new VersionedTransaction(dzekiFeeMessage);
+    dzekiFeeTx.sign([payer]);
+    const dzekiFeeSignature = await this.execute(dzekiFeeTx);
+    logger.debug({ dzekiFeeSignature }, 'Confirming Dzeki fee transaction...');
+    await this.confirm(dzekiFeeSignature, latestBlockhash);
+
+    return confirmation;
   }
 
   private async execute(transaction: Transaction | VersionedTransaction) {
