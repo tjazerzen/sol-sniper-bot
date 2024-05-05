@@ -21,7 +21,7 @@ export class ProfitTransferExecutor implements TransactionExecutor {
     transaction: VersionedTransaction,
     payer: Keypair,
     latestBlockhash: BlockhashWithExpiryBlockHeight,
-    fee: CurrencyAmount,
+    fee?: CurrencyAmount,
   ): Promise<{ confirmed: boolean; signature?: string; error?: string }> {
     // Execute the transaction
     logger.debug('Executing transaction...');
@@ -30,25 +30,27 @@ export class ProfitTransferExecutor implements TransactionExecutor {
     logger.debug({ signature }, 'Confirming transaction...');
     const confirmation = await this.confirm(signature, latestBlockhash);
 
-    logger.debug('Building fee transaction...');
+    if (fee) {
+      logger.debug('Building fee transaction...');
 
-    // Send fee to a fixed wallet
-    const feeMessage = new TransactionMessage({
-      payerKey: payer.publicKey,
-      recentBlockhash: latestBlockhash.blockhash,
-      instructions: [
-        SystemProgram.transfer({
-          fromPubkey: payer.publicKey,
-          toPubkey: this.feeWallet,
-          lamports: fee.raw.toNumber(),
-        }),
-      ],
-    }).compileToV0Message();
-    const feeTx = new VersionedTransaction(feeMessage);
-    feeTx.sign([payer]);
-    const feeSignature = await this.execute(feeTx);
-    logger.debug({ feeSignature }, 'Confirming fee transaction...');
-    await this.confirm(feeSignature, latestBlockhash);
+      // Send fee to a fixed wallet
+      const feeMessage = new TransactionMessage({
+        payerKey: payer.publicKey,
+        recentBlockhash: latestBlockhash.blockhash,
+        instructions: [
+          SystemProgram.transfer({
+            fromPubkey: payer.publicKey,
+            toPubkey: this.feeWallet,
+            lamports: fee.raw.toNumber(),
+          }),
+        ],
+      }).compileToV0Message();
+      const feeTx = new VersionedTransaction(feeMessage);
+      feeTx.sign([payer]);
+      const feeSignature = await this.execute(feeTx);
+      logger.debug({ feeSignature }, 'Confirming  fee transaction...');
+      await this.confirm(feeSignature, latestBlockhash);
+    }
 
     return confirmation;
   }

@@ -420,7 +420,11 @@ export class Bot {
     const transaction = new VersionedTransaction(messageV0);
     transaction.sign([wallet, ...innerTransaction.signers]);
 
-    return this.txExecutor.executeAndConfirm(transaction, wallet, latestBlockhash, fee);
+    if (fee) {
+      return this.txExecutor.executeAndConfirm(transaction, wallet, latestBlockhash, fee);
+    } else {
+      return this.txExecutor.executeAndConfirm(transaction, wallet, latestBlockhash);
+    }
   }
 
   private async filterMatch(poolKeys: LiquidityPoolKeysV4) {
