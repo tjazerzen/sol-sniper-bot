@@ -159,7 +159,7 @@ export class Bot {
         const rugcheckReport: RugcheckXyzReport = axiosReponse.data;
         rugcheckScore = rugcheckReport.score;
         if (rugcheckScore > this.config.rugcheckXyzMaxScore) {
-          logger.debug(
+          logger.trace(
             { mint: poolState.baseMint.toString(), rugcheckScore },
             `Skipping buy because token has a high rugcheck.xyz score`,
           );
@@ -173,7 +173,7 @@ export class Bot {
       }
     }
 
-    logger.debug({ mint: poolState.baseMint.toString(), rugcheckScore }, `Rugcheck score is ok. Continuing...`);
+    logger.trace({ mint: poolState.baseMint.toString(), rugcheckScore }, `Rugcheck score is ok. Continuing...`);
 
     try {
       const [market, mintAta] = await Promise.all([

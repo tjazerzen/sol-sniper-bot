@@ -36,7 +36,7 @@ export class MarketCache {
 
   public save(marketId: string, keys: MinimalMarketLayoutV3) {
     if (!this.keys.has(marketId)) {
-      // logger.trace({}, `Caching new market: ${marketId}`);
+      logger.trace({}, `Caching new market: ${marketId}`);
       this.keys.set(marketId, keys);
     }
   }
