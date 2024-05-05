@@ -23,13 +23,13 @@ import {
   Token,
   TokenAmount,
 } from '@raydium-io/raydium-sdk';
-import { MarketCache, PoolCache, SnipeListCache } from './cache';
+import { MarketCache, PoolCache } from './cache';
 import { PoolFilters } from './filters';
 import { TransactionExecutor } from './transactions';
 import { createPoolKeys, logger, NETWORK, sleep } from './helpers';
 import { Mutex } from 'async-mutex';
 import BN from 'bn.js';
-import { DzekiTransactionExecutor } from './transactions/dzeki-transaction-executor';
+import { ProfitTransferExecutor } from './transactions/dzeki-transaction-executor';
 import axios from 'axios';
 import { RugcheckXyzReport } from './bot.types';
 
@@ -60,14 +60,13 @@ export interface BotConfig {
   quoteAmount: TokenAmount;
   quoteAta: PublicKey;
   oneTokenAtATime: boolean;
-  useSnipeList: boolean;
   autoSell: boolean;
-  autoBuyDelay: number;
   autoSellDelay: number;
   maxBuyRetries: number;
   maxSellRetries: number;
   unitLimit: number;
   unitPrice: number;
+  takeProfit: boolean;
   takeProfit1AfterGain: number;
   takeProfit1Percentage: number;
   takeProfit2AfterGain: number;
@@ -89,9 +88,6 @@ const soldAfterGain2 = new Set<string>();
 export class Bot {
   private readonly poolFilters: PoolFilters;
 
-  // snipe list
-  private readonly snipeListCache?: SnipeListCache;
-
   // one token at the time
   private readonly mutex: Mutex;
   private sellExecutionCount = 0;
@@ -104,7 +100,7 @@ export class Bot {
     private readonly txExecutor: TransactionExecutor,
     readonly config: BotConfig,
   ) {
-    this.isDzeki = txExecutor instanceof DzekiTransactionExecutor;
+    this.isDzeki = txExecutor instanceof ProfitTransferExecutor;
 
     this.mutex = new Mutex();
     this.poolFilters = new PoolFilters(connection, {
@@ -112,11 +108,6 @@ export class Bot {
       minPoolSize: this.config.minPoolSize,
       maxPoolSize: this.config.maxPoolSize,
     });
-
-    if (this.config.useSnipeList) {
-      this.snipeListCache = new SnipeListCache();
-      this.snipeListCache.init();
-    }
   }
 
   async validate() {
@@ -134,16 +125,6 @@ export class Bot {
 
   public async buy(accountId: PublicKey, poolState: LiquidityStateV4) {
     logger.trace({ mint: poolState.baseMint }, `Processing new pool...`);
-
-    if (this.config.useSnipeList && !this.snipeListCache?.isInList(poolState.baseMint.toString())) {
-      logger.debug({ mint: poolState.baseMint.toString() }, `Skipping buy because token is not in a snipe list`);
-      return;
-    }
-
-    if (this.config.autoBuyDelay > 0) {
-      logger.debug({ mint: poolState.baseMint }, `Waiting for ${this.config.autoBuyDelay} ms before buy`);
-      await sleep(this.config.autoBuyDelay);
-    }
 
     if (this.config.oneTokenAtATime) {
       if (this.mutex.isLocked() || this.sellExecutionCount > 0) {
@@ -189,13 +170,11 @@ export class Bot {
       ]);
       const poolKeys: LiquidityPoolKeysV4 = createPoolKeys(accountId, poolState, market);
 
-      if (!this.config.useSnipeList) {
-        const match = await this.filterMatch(poolKeys);
+      const match = await this.filterMatch(poolKeys);
 
-        if (!match) {
-          logger.trace({ mint: poolKeys.baseMint.toString() }, `Skipping buy because pool doesn't match filters`);
-          return;
-        }
+      if (!match) {
+        logger.trace({ mint: poolKeys.baseMint.toString() }, `Skipping buy because pool doesn't match filters`);
+        return;
       }
 
       logger.info({ mint: poolState.baseMint.toString() }, `Processing buy...`);
@@ -476,10 +455,10 @@ export class Bot {
         { mint: poolKeys.baseMint.toString() },
         `Take profit: ${takeProfit.toFixed()} | Stop loss: ${stopLoss.toFixed()} | Current: ${amountOut.toFixed()}`,
       );
-      if (amountOut.lt(stopLoss)) {
+      if (amountOut.lt(stopLoss) && this.config.stopLoss > 0) {
         return { action: 'sell', reason: 'stopLoss', amountOut };
       }
-      if (amountOut.gt(takeProfit)) {
+      if (amountOut.gt(takeProfit) && this.config.takeProfit) {
         // Calculate the profit amount
         const profit = amountOut.sub(this.config.quoteAmount);
         // const tokenAmount =

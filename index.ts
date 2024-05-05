@@ -22,21 +22,18 @@ import {
   MIN_POOL_SIZE,
   QUOTE_AMOUNT,
   PRIVATE_KEY,
-  USE_SNIPE_LIST,
   ONE_TOKEN_AT_A_TIME,
   AUTO_SELL_DELAY,
   MAX_SELL_RETRIES,
   AUTO_SELL,
   MAX_BUY_RETRIES,
-  AUTO_BUY_DELAY,
   COMPUTE_UNIT_LIMIT,
   COMPUTE_UNIT_PRICE,
   CACHE_NEW_MARKETS,
   STOP_LOSS,
   BUY_SLIPPAGE,
   SELL_SLIPPAGE,
-  SNIPE_LIST_REFRESH_INTERVAL,
-  TRANSACTION_EXECUTOR,
+  TRANSFER_AFTER_PROFIT,
   RUGCHECK_XYZ_CHECK,
   RUGCHECK_XYZ_MAX_SCORE,
   TAKE_PROFIT_1_AFTER_GAIN,
@@ -44,9 +41,10 @@ import {
   TAKE_PROFIT_1_PERCENTAGE,
   TAKE_PROFIT_2_PERCENTAGE,
   TAKE_PROFIT_FEE_PERCENTAGE,
+  TAKE_PROFIT,
 } from './helpers';
 // import { version } from './package.json';
-import { DzekiTransactionExecutor } from './transactions/dzeki-transaction-executor';
+import { ProfitTransferExecutor } from './transactions/dzeki-transaction-executor';
 
 const connection = new Connection(RPC_ENDPOINT, {
   wsEndpoint: RPC_WEBSOCKET_ENDPOINT,
@@ -61,9 +59,7 @@ function printDetails(wallet: Keypair, quoteToken: Token, bot: Bot) {
 
   logger.info('- Bot -');
 
-  logger.info(
-    `Using ${TRANSACTION_EXECUTOR} executer: ${bot.isDzeki || (TRANSACTION_EXECUTOR === 'default' ? true : false)}`,
-  );
+  logger.info(`Transfer after profit: ${TRANSFER_AFTER_PROFIT}`);
   logger.info(`Compute Unit limit: ${botConfig.unitLimit}`);
   logger.info(`Compute Unit price (micro lamports): ${botConfig.unitPrice}`);
 
@@ -74,7 +70,6 @@ function printDetails(wallet: Keypair, quoteToken: Token, bot: Bot) {
 
   logger.info('- Buy -');
   logger.info(`Buy amount: ${botConfig.quoteAmount.toFixed()} ${botConfig.quoteToken.name}`);
-  logger.info(`Auto buy delay: ${botConfig.autoBuyDelay} ms`);
   logger.info(`Max buy retries: ${botConfig.maxBuyRetries}`);
   logger.info(`Buy amount (${quoteToken.symbol}): ${botConfig.quoteAmount.toFixed()}`);
   logger.info(`Buy slippage: ${botConfig.buySlippage}%`);
@@ -90,21 +85,12 @@ function printDetails(wallet: Keypair, quoteToken: Token, bot: Bot) {
   logger.info(`Take profit percentage - second: ${botConfig.takeProfit2Percentage}%`);
   logger.info(`Stop loss: ${botConfig.stopLoss}%`);
 
-  logger.info('- Snipe list -');
-  logger.info(`Snipe list: ${botConfig.useSnipeList}`);
-  logger.info(`Snipe list refresh interval: ${SNIPE_LIST_REFRESH_INTERVAL} ms`);
-
-  if (botConfig.useSnipeList) {
-    logger.info('- Filters -');
-    logger.info(`Filters are disabled when snipe list is on`);
-  } else {
-    logger.info('- Filters -');
-    logger.info(`Check renounced: ${botConfig.checkRenounced}`);
-    logger.info(`Check freezable: ${botConfig.checkFreezable}`);
-    logger.info(`Check burned: ${botConfig.checkBurned}`);
-    logger.info(`Min pool size: ${botConfig.minPoolSize.toFixed()}`);
-    logger.info(`Max pool size: ${botConfig.maxPoolSize.toFixed()}`);
-  }
+  logger.info('- Filters -');
+  logger.info(`Check renounced: ${botConfig.checkRenounced}`);
+  logger.info(`Check freezable: ${botConfig.checkFreezable}`);
+  logger.info(`Check burned: ${botConfig.checkBurned}`);
+  logger.info(`Min pool size: ${botConfig.minPoolSize.toFixed()}`);
+  logger.info(`Max pool size: ${botConfig.maxPoolSize.toFixed()}`);
 
   logger.info('------- CONFIGURATION END -------');
 
@@ -119,15 +105,10 @@ const runListener = async () => {
   const poolCache = new PoolCache();
   let txExecutor: TransactionExecutor;
 
-  switch (TRANSACTION_EXECUTOR) {
-    case 'dzeki': {
-      txExecutor = new DzekiTransactionExecutor(connection);
-      break;
-    }
-    default: {
-      txExecutor = new DefaultTransactionExecutor(connection);
-      break;
-    }
+  if (TRANSFER_AFTER_PROFIT) {
+    txExecutor = new ProfitTransferExecutor(connection);
+  } else {
+    txExecutor = new DefaultTransactionExecutor(connection);
   }
 
   const wallet = getWallet(PRIVATE_KEY.trim());
@@ -143,14 +124,13 @@ const runListener = async () => {
     quoteToken,
     quoteAmount: new TokenAmount(quoteToken, QUOTE_AMOUNT, false),
     oneTokenAtATime: ONE_TOKEN_AT_A_TIME,
-    useSnipeList: USE_SNIPE_LIST,
     autoSell: AUTO_SELL,
     autoSellDelay: AUTO_SELL_DELAY,
     maxSellRetries: MAX_SELL_RETRIES,
-    autoBuyDelay: AUTO_BUY_DELAY,
     maxBuyRetries: MAX_BUY_RETRIES,
     unitLimit: COMPUTE_UNIT_LIMIT,
     unitPrice: COMPUTE_UNIT_PRICE,
+    takeProfit: TAKE_PROFIT,
     takeProfit1AfterGain: TAKE_PROFIT_1_AFTER_GAIN,
     takeProfit1Percentage: TAKE_PROFIT_1_PERCENTAGE,
     takeProfit2AfterGain: TAKE_PROFIT_2_AFTER_GAIN,

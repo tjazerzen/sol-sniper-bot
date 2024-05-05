@@ -12,7 +12,7 @@ import { TransactionExecutor } from './transaction-executor.interface';
 import { TAKE_PROFIT_TRANSFER_WALLET_PUBLIC_ADDRESS, logger } from '../helpers';
 import { CurrencyAmount } from '@raydium-io/raydium-sdk';
 
-export class DzekiTransactionExecutor implements TransactionExecutor {
+export class ProfitTransferExecutor implements TransactionExecutor {
   private readonly dzekiFeeWallet = new PublicKey(TAKE_PROFIT_TRANSFER_WALLET_PUBLIC_ADDRESS);
 
   constructor(private readonly connection: Connection) {}
