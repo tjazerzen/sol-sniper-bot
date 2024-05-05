@@ -6,7 +6,7 @@ Script listens to new Raydium USDC or SOL pools and buys tokens for a fixed amou
 
 The bot implements two strategies:
 
-- Buy new tokens and sell them after a specified gain percentage.
+- Buy new tokens and sell them after two different gain percentages.
 - Buy new tokens and sell them after a specified delay.
 
 ## Setup
@@ -22,7 +22,7 @@ To run the script you need to:
 - Install dependencies by typing: `npm install`
 - Run the script by typing: `npm run start` in terminal
 
-You should see the following output:  
+You should see the following output:
 ![output](readme/output.png)
 
 ### Configuration
@@ -37,65 +37,63 @@ You should see the following output:
 - `RPC_WEBSOCKET_ENDPOINT` - WebSocket RPC endpoint for real-time updates from the Solana network.
 - `COMMITMENT_LEVEL`- The commitment level of transactions (e.g., "finalized" for the highest level of security).
 
+The transactions are executed on Solana's mainnet-beta network.
+
 #### Bot
 
 - `LOG_LEVEL` - Set logging level, e.g., `info`, `debug`, `trace`, etc.
 - `ONE_TOKEN_AT_A_TIME` - Set to `true` to process buying one token at a time.
-- `COMPUTE_UNIT_LIMIT` - Compute limit used to calculate fees.
-- `COMPUTE_UNIT_PRICE` - Compute price used to calculate fees.
 - `PRE_LOAD_EXISTING_MARKETS` - Bot will load all existing markets in memory on start.
-  - This option should not be used with public RPC.
 - `CACHE_NEW_MARKETS` - Set to `true` to cache new markets.
   - This option should not be used with public RPC.
-- `TRANSACTION_EXECUTOR` - Set to `dzeki` to use dzeki validation executing transactions, or to anything else not to use it.
-- `CUSTOM_FEE` - If using dzeki executors this value will be used for transaction fees instead of `COMPUTE_UNIT_LIMIT` and `COMPUTE_UNIT_LIMIT`
-  - Minimum value is 0.0001 SOL, but we recommend using 0.006 SOL or above
-  - On top of this fee, minimal solana network fee will be applied
+- `TRANSFER_AFTER_PROFIT` - Set to `true` to transfer a portion of the profit to the some other wallet.
+- `TAKE_PROFIT_FEE_PERCENTAGE` - Percentage of profit to transfer to the other wallet.
+- `TAKE_PROFIT_TRANSFER_WALLET_PUBLIC_ADDRESS` - Public address of the wallet to transfer the allocated profit.
+
+#### Fees
+
+- `COMPUTE_UNIT_LIMIT` - Compute limit used to calculate fees.
+- `COMPUTE_UNIT_PRICE` - Compute price used to calculate fees.
+  - This option should not be used with public RPC.
 
 #### Buy
 
 - `QUOTE_MINT` - Which pools to snipe, USDC or WSOL.
 - `QUOTE_AMOUNT` - Amount used to buy each new token.
-- `AUTO_BUY_DELAY` - Delay in milliseconds before buying a token.
 - `MAX_BUY_RETRIES` - Maximum number of retries for buying a token.
 - `BUY_SLIPPAGE` - Slippage %
 
 #### Sell
 
-- `AUTO_SELL` - Set to `true` to enable automatic selling of tokens.
-  - If you want to manually sell bought tokens, disable this option.
+**General sell params**
+
 - `MAX_SELL_RETRIES` - Maximum number of retries for selling a token.
-- `AUTO_SELL_DELAY` - Delay in milliseconds before auto-selling a token.
-- `PRICE_CHECK_INTERVAL` - Interval in milliseconds for checking the take profit and stop loss conditions.
-  - Set to zero to disable take profit and stop loss.
-- `PRICE_CHECK_DURATION` - Time in milliseconds to wait for stop loss/take profit conditions.
-  - If you don't reach profit or loss bot will auto sell after this time.
-  - Set to zero to disable take profit and stop loss.
-- `TAKE_PROFIT` - Percentage profit at which to take profit.
-  - Take profit is calculated based on quote mint.
 - `STOP_LOSS` - Percentage loss at which to stop the loss.
+
   - Stop loss is calculated based on quote mint.
+  - If you want to disable stop loss, set this to `0`.
+
 - `SELL_SLIPPAGE` - Slippage %.
 
-#### Snipe list
+**Auto sell params**
 
-- `USE_SNIPE_LIST` - Set to `true` to enable buying only tokens listed in `snipe-list.txt`.
-  - Pool must not exist before the bot starts.
-  - If token can be traded before bot starts nothing will happen. Bot will not buy the token.
-- `SNIPE_LIST_REFRESH_INTERVAL` - Interval in milliseconds to refresh the snipe list.
-  - You can update snipe list while bot is running. It will pickup the new changes each time it does refresh.
+- `AUTO_SELL` - Set to `true` to enable automatic selling of tokens.
+  - If you want to manually sell bought tokens, disable this option.
+- `AUTO_SELL_DELAY` - Delay in milliseconds before auto-selling a token.
 
-Note: When using snipe list filters below will be disabled.
+  - If you don't reach profit or loss bot will auto sell after this time.
+  - Set to zero to disable take profit and stop loss.
+
+  **Take profit params**
+
+- `TAKE_PROFIT` - Whether to take profit after a percentage gain. Set to `true` to enable. We employ a strategy of selling after two different gain percentages.
+- `TAKE_PROFIT_1_AFTER_GAIN` - Percentage gain at which to take the first share of profit.
+- `TAKE_PROFIT_1_PERCENTAGE` - Percentage of the profit to take after the first gain.
+- `TAKE_PROFIT_2_AFTER_GAIN` - Percentage gain at which to take the second share of profit.
+- `TAKE_PROFIT_2_PERCENTAGE` - Percentage of the profit to take after the second gain.
 
 #### Filters
 
-- `FILTER_CHECK_INTERVAL` - Interval in milliseconds for checking if pool match the filters.
-  - Set to zero to disable filters.
-- `FILTER_CHECK_DURATION` - Time in milliseconds to wait for pool to match the filters.
-  - If pool doesn't match the filter buy will not happen.
-  - Set to zero to disable filters.
-- `CONSECUTIVE_FILTER_MATCHES` - How many times in a row pool needs to match the filters.
-  - This is useful because when pool is burned (and rugged), other filters may not report the same behavior. eg. pool size may still have old value
 - `CHECK_IF_MUTABLE` - Set to `true` to buy tokens only if their metadata are not mutable.
 - `CHECK_IF_MINT_IS_RENOUNCED` - Set to `true` to buy tokens only if their mint is renounced.
 - `CHECK_IF_FREEZABLE` - Set to `true` to buy tokens only if they are not freezable.
@@ -104,6 +102,13 @@ Note: When using snipe list filters below will be disabled.
   - Set `0` to disable.
 - `MAX_POOL_SIZE` - Bot will buy only if the pool size is less than or equal the specified amount.
   - Set `0` to disable.
+
+#### Checking for rugs
+
+For checking rugs, we use rugcheck.xyz API. For every mint address, we check the coin rugcheck safety score. If the score is more than the specified threshold, the bot will not buy the token.
+
+- `RUGCHECK_XYZ_CHECK` - Set to `true` to check for rugs.
+- `RUGCHECK_XYZ_MAX_SCORE` - Maximum score for the token to be considered safe.
 
 ## Disclaimer
 
