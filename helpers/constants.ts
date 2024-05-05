@@ -45,9 +45,14 @@ export const BUY_SLIPPAGE = Number(retrieveEnvVariable('BUY_SLIPPAGE', logger));
 export const AUTO_SELL = retrieveEnvVariable('AUTO_SELL', logger) === 'true';
 export const AUTO_SELL_DELAY = Number(retrieveEnvVariable('AUTO_SELL_DELAY', logger));
 export const MAX_SELL_RETRIES = Number(retrieveEnvVariable('MAX_SELL_RETRIES', logger));
-export const TAKE_PROFIT = Number(retrieveEnvVariable('TAKE_PROFIT', logger));
+// export const TAKE_PROFIT = Number(retrieveEnvVariable('TAKE_PROFIT', logger));
 export const STOP_LOSS = Number(retrieveEnvVariable('STOP_LOSS', logger));
 export const SELL_SLIPPAGE = Number(retrieveEnvVariable('SELL_SLIPPAGE', logger));
+
+export const TAKE_PROFIT_1_AFTER_GAIN = Number(retrieveEnvVariable('TAKE_PROFIT_1_AFTER_GAIN', logger));
+export const TAKE_PROFIT_1_PERCENTAGE = Number(retrieveEnvVariable('TAKE_PROFIT_1_PERCENTAGE', logger));
+export const TAKE_PROFIT_2_AFTER_GAIN = Number(retrieveEnvVariable('TAKE_PROFIT_2_AFTER_GAIN', logger));
+export const TAKE_PROFIT_2_PERCENTAGE = Number(retrieveEnvVariable('TAKE_PROFIT_2_PERCENTAGE', logger));
 
 // Filters
 export const CHECK_IF_MUTABLE = retrieveEnvVariable('CHECK_IF_MUTABLE', logger) === 'true';

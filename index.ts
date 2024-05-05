@@ -33,7 +33,6 @@ import {
   COMPUTE_UNIT_LIMIT,
   COMPUTE_UNIT_PRICE,
   CACHE_NEW_MARKETS,
-  TAKE_PROFIT,
   STOP_LOSS,
   BUY_SLIPPAGE,
   SELL_SLIPPAGE,
@@ -43,6 +42,10 @@ import {
   // TRANSACTION_FEE_WALLET,
   RUGCHECK_XYZ_CHECK,
   RUGCHECK_XYZ_MAX_SCORE,
+  TAKE_PROFIT_1_AFTER_GAIN,
+  TAKE_PROFIT_2_AFTER_GAIN,
+  TAKE_PROFIT_1_PERCENTAGE,
+  TAKE_PROFIT_2_PERCENTAGE,
 } from './helpers';
 // import { version } from './package.json';
 import { DzekiTransactionExecutor } from './transactions/dzeki-transaction-executor';
@@ -87,7 +90,10 @@ function printDetails(wallet: Keypair, quoteToken: Token, bot: Bot) {
   logger.info(`Auto sell delay: ${botConfig.autoSellDelay} ms`);
   logger.info(`Max sell retries: ${botConfig.maxSellRetries}`);
   logger.info(`Sell slippage: ${botConfig.sellSlippage}%`);
-  logger.info(`Take profit: ${botConfig.takeProfit}%`);
+  logger.info(`Take profit after gain - first: ${botConfig.takeProfit1AfterGain}%`);
+  logger.info(`Take profit percentage - first: ${botConfig.takeProfit1Percentage}%`);
+  logger.info(`Take profit after gain - second: ${botConfig.takeProfit2AfterGain}%`);
+  logger.info(`Take profit percentage - second: ${botConfig.takeProfit2Percentage}%`);
   logger.info(`Stop loss: ${botConfig.stopLoss}%`);
 
   logger.info('- Snipe list -');
@@ -151,7 +157,10 @@ const runListener = async () => {
     maxBuyRetries: MAX_BUY_RETRIES,
     unitLimit: COMPUTE_UNIT_LIMIT,
     unitPrice: COMPUTE_UNIT_PRICE,
-    takeProfit: TAKE_PROFIT,
+    takeProfit1AfterGain: TAKE_PROFIT_1_AFTER_GAIN,
+    takeProfit1Percentage: TAKE_PROFIT_1_PERCENTAGE,
+    takeProfit2AfterGain: TAKE_PROFIT_2_AFTER_GAIN,
+    takeProfit2Percentage: TAKE_PROFIT_2_PERCENTAGE,
     stopLoss: STOP_LOSS,
     buySlippage: BUY_SLIPPAGE,
     sellSlippage: SELL_SLIPPAGE,

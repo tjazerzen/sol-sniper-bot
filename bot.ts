@@ -62,13 +62,22 @@ export interface BotConfig {
   maxSellRetries: number;
   unitLimit: number;
   unitPrice: number;
-  takeProfit: number;
+  takeProfit1AfterGain: number;
+  takeProfit1Percentage: number;
+  takeProfit2AfterGain: number;
+  takeProfit2Percentage: number;
   stopLoss: number;
   buySlippage: number;
   sellSlippage: number;
   rugcheckXyzCheck: boolean;
   rugcheckXyzMaxScore: number;
 }
+
+// Set of those mint addresses that have been sold after gain 1 (takeProfit1After gain)
+const soldAfterGain1 = new Set<string>();
+
+// Set of those mint addresses that have been sold after gain 2 (takeProfit2After gain)
+const soldAfterGain2 = new Set<string>();
 
 export class Bot {
   private readonly poolFilters: PoolFilters;
@@ -238,25 +247,41 @@ export class Bot {
   }
 
   public async sell(accountId: PublicKey, rawAccount: RawAccount) {
+    const accountMintAddress = rawAccount.mint.toString();
+
+    if (soldAfterGain1.has(accountMintAddress) && soldAfterGain2.has(accountMintAddress)) {
+      logger.debug({ mint: accountMintAddress }, `Skipping sell because token was sold after gain twice`);
+    }
+
     if (this.config.oneTokenAtATime) {
       this.sellExecutionCount++;
+    }
+
+    let desiredGain: number = this.config.takeProfit1AfterGain;
+    let sellingRound: 'first' | 'second' = 'first';
+    if (soldAfterGain1.has(accountMintAddress)) {
+      desiredGain = this.config.takeProfit2AfterGain;
+      sellingRound = 'second';
     }
 
     try {
       logger.trace({ mint: rawAccount.mint }, `Processing new token...`);
 
-      const poolData = await this.poolStorage.get(rawAccount.mint.toString());
+      const poolData = await this.poolStorage.get(accountMintAddress);
 
       if (!poolData) {
-        logger.trace({ mint: rawAccount.mint.toString() }, `Token pool data is not found, can't sell`);
+        logger.trace({ mint: accountMintAddress }, `Token pool data is not found, can't sell`);
         return;
       }
 
       const tokenIn = new Token(TOKEN_PROGRAM_ID, poolData.state.baseMint, poolData.state.baseDecimal.toNumber());
-      const tokenAmountIn = new TokenAmount(tokenIn, rawAccount.amount, true);
+      const tokenInPercentage =
+        sellingRound == 'first' ? this.config.takeProfit1Percentage : this.config.takeProfit2Percentage;
+      const tokenInAmount = (BigInt(tokenInPercentage) * rawAccount.amount) / BigInt(100);
+      const tokenAmountIn = new TokenAmount(tokenIn, tokenInAmount, true);
 
       if (tokenAmountIn.isZero()) {
-        logger.info({ mint: rawAccount.mint.toString() }, `Empty balance, can't sell`);
+        logger.info({ mint: accountMintAddress }, `Empty balance, can't sell`);
         return;
       }
 
@@ -268,9 +293,9 @@ export class Bot {
       const market = await this.marketStorage.get(poolData.state.marketId.toString());
       const poolKeys: LiquidityPoolKeysV4 = createPoolKeys(new PublicKey(poolData.id), poolData.state, market);
 
-      const priceMatchResponse = await this.priceMatch(tokenAmountIn, poolKeys);
+      const priceMatchResponse = await this.priceMatch(tokenAmountIn, poolKeys, desiredGain);
       if (priceMatchResponse.action == 'sell') {
-        logger.info({ mint: rawAccount.mint.toString(), priceMatchResponse }, `Matched the price, executing sale...`);
+        logger.info({ mint: accountMintAddress, priceMatchResponse }, `Matched the price, executing sale...`);
         for (let i = 0; i < this.config.maxSellRetries; i++) {
           try {
             logger.info(
@@ -293,33 +318,38 @@ export class Bot {
             if (result.confirmed) {
               logger.info(
                 {
-                  dex: `https://dexscreener.com/solana/${rawAccount.mint.toString()}?maker=${this.config.wallet.publicKey}`,
-                  mint: rawAccount.mint.toString(),
+                  dex: `https://dexscreener.com/solana/${accountMintAddress}?maker=${this.config.wallet.publicKey}`,
+                  mint: accountMintAddress,
                   signature: result.signature,
                   url: `https://solscan.io/tx/${result.signature}?cluster=${NETWORK}`,
                 },
                 `Confirmed sell tx`,
               );
+              if (sellingRound == 'first') {
+                soldAfterGain1.add(accountMintAddress);
+              } else {
+                soldAfterGain2.add(accountMintAddress);
+              }
               break;
             }
 
             logger.info(
               {
-                mint: rawAccount.mint.toString(),
+                mint: accountMintAddress,
                 signature: result.signature,
                 error: result.error,
               },
               `Error confirming sell tx`,
             );
           } catch (error) {
-            logger.debug({ mint: rawAccount.mint.toString(), error }, `Error confirming sell transaction`);
+            logger.debug({ mint: accountMintAddress, error }, `Error confirming sell transaction`);
           }
         }
       } else {
-        logger.info({ mint: rawAccount.mint.toString(), priceMatchResponse }, `Price doesn't match, skipping sell...`);
+        logger.info({ mint: accountMintAddress, priceMatchResponse }, `Price doesn't match, skipping sell...`);
       }
     } catch (error) {
-      logger.error({ mint: rawAccount.mint.toString(), error }, `Failed to sell token`);
+      logger.error({ mint: accountMintAddress, error }, `Failed to sell token`);
     } finally {
       if (this.config.oneTokenAtATime) {
         this.sellExecutionCount--;
@@ -403,9 +433,12 @@ export class Bot {
     return await this.poolFilters.execute(poolKeys);
   }
 
-  private async priceMatch(amountIn: TokenAmount, poolKeys: LiquidityPoolKeysV4): Promise<PriceMatchResponse> {
-    // const timesToCheck = this.config.priceCheckDuration / this.config.priceCheckInterval;
-    const profitFraction = this.config.quoteAmount.mul(this.config.takeProfit).numerator.div(new BN(100));
+  private async priceMatch(
+    amountIn: TokenAmount,
+    poolKeys: LiquidityPoolKeysV4,
+    profitGainPercentage: number,
+  ): Promise<PriceMatchResponse> {
+    const profitFraction = this.config.quoteAmount.mul(profitGainPercentage).numerator.div(new BN(100));
     const profitAmount = new TokenAmount(this.config.quoteToken, profitFraction, true);
     const takeProfit = this.config.quoteAmount.add(profitAmount);
     const lossFraction = this.config.quoteAmount.mul(this.config.stopLoss).numerator.div(new BN(100));
