@@ -29,7 +29,7 @@ import { TransactionExecutor } from './transactions';
 import { createPoolKeys, logger, NETWORK, sleep } from './helpers';
 import { Mutex } from 'async-mutex';
 import BN from 'bn.js';
-import { ProfitTransferExecutor } from './transactions/dzeki-transaction-executor';
+import { ProfitTransferExecutor } from './transactions/profit-transaction-executor';
 import axios from 'axios';
 import { RugcheckXyzReport } from './bot.types';
 
@@ -91,7 +91,7 @@ export class Bot {
   // one token at the time
   private readonly mutex: Mutex;
   private sellExecutionCount = 0;
-  public readonly isDzeki: boolean = false;
+  public readonly isProfitExecutor: boolean = false;
 
   constructor(
     private readonly connection: Connection,
@@ -100,7 +100,7 @@ export class Bot {
     private readonly txExecutor: TransactionExecutor,
     readonly config: BotConfig,
   ) {
-    this.isDzeki = txExecutor instanceof ProfitTransferExecutor;
+    this.isProfitExecutor = txExecutor instanceof ProfitTransferExecutor;
 
     this.mutex = new Mutex();
     this.poolFilters = new PoolFilters(connection, {
@@ -286,7 +286,7 @@ export class Bot {
       if (priceMatchResponse.action == 'sell') {
         logger.info({ mint: accountMintAddress, priceMatchResponse }, `Matched the price, executing sale...`);
         let fee: undefined | CurrencyAmount = undefined;
-        if (priceMatchResponse.reason == 'takeProfit' && this.isDzeki) {
+        if (priceMatchResponse.reason == 'takeProfit' && this.isProfitExecutor) {
           logger.debug({ mint: accountMintAddress }, `Calculating fee for take profit`);
           const profit = priceMatchResponse.profit;
           const feeFraction = profit.mul(this.config.takeProfitFeePercentage).numerator.div(new BN(100));

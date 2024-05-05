@@ -1,6 +1,6 @@
 {
-  "name": "dzeki-solana-bot",
-  "author": "Tjaz Erzen",
+  "name": "solana-bot",
+  "author": "test-bot-solana",
   "version": "2.0.1",
   "scripts": {
     "start": "ts-node index.ts",

@@ -44,7 +44,7 @@ import {
   TAKE_PROFIT,
 } from './helpers';
 // import { version } from './package.json';
-import { ProfitTransferExecutor } from './transactions/dzeki-transaction-executor';
+import { ProfitTransferExecutor } from './transactions/profit-transaction-executor';
 
 const connection = new Connection(RPC_ENDPOINT, {
   wsEndpoint: RPC_WEBSOCKET_ENDPOINT,

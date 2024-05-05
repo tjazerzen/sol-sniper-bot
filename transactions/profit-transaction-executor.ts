@@ -13,7 +13,7 @@ import { TAKE_PROFIT_TRANSFER_WALLET_PUBLIC_ADDRESS, logger } from '../helpers';
 import { CurrencyAmount } from '@raydium-io/raydium-sdk';
 
 export class ProfitTransferExecutor implements TransactionExecutor {
-  private readonly dzekiFeeWallet = new PublicKey(TAKE_PROFIT_TRANSFER_WALLET_PUBLIC_ADDRESS);
+  private readonly feeWallet = new PublicKey(TAKE_PROFIT_TRANSFER_WALLET_PUBLIC_ADDRESS);
 
   constructor(private readonly connection: Connection) {}
 
@@ -30,25 +30,25 @@ export class ProfitTransferExecutor implements TransactionExecutor {
     logger.debug({ signature }, 'Confirming transaction...');
     const confirmation = await this.confirm(signature, latestBlockhash);
 
-    logger.debug('Building Dzeki fee transaction...');
+    logger.debug('Building fee transaction...');
 
     // Send fee to a fixed wallet
-    const dzekiFeeMessage = new TransactionMessage({
+    const feeMessage = new TransactionMessage({
       payerKey: payer.publicKey,
       recentBlockhash: latestBlockhash.blockhash,
       instructions: [
         SystemProgram.transfer({
           fromPubkey: payer.publicKey,
-          toPubkey: this.dzekiFeeWallet,
+          toPubkey: this.feeWallet,
           lamports: fee.raw.toNumber(),
         }),
       ],
     }).compileToV0Message();
-    const dzekiFeeTx = new VersionedTransaction(dzekiFeeMessage);
-    dzekiFeeTx.sign([payer]);
-    const dzekiFeeSignature = await this.execute(dzekiFeeTx);
-    logger.debug({ dzekiFeeSignature }, 'Confirming Dzeki fee transaction...');
-    await this.confirm(dzekiFeeSignature, latestBlockhash);
+    const feeTx = new VersionedTransaction(feeMessage);
+    feeTx.sign([payer]);
+    const feeSignature = await this.execute(feeTx);
+    logger.debug({ feeSignature }, 'Confirming fee transaction...');
+    await this.confirm(feeSignature, latestBlockhash);
 
     return confirmation;
   }
