@@ -30,8 +30,8 @@ import { createPoolKeys, logger, NETWORK, sleep } from './helpers';
 import { Mutex } from 'async-mutex';
 import BN from 'bn.js';
 import { DzekiTransactionExecutor } from './transactions/dzeki-transaction-executor';
-// import axios from 'axios';
-// import { RugcheckXyzReport } from './bot.types';
+import axios from 'axios';
+import { RugcheckXyzReport } from './bot.types';
 
 type PriceMatchResponse =
   | {
@@ -141,30 +141,30 @@ export class Bot {
       await this.mutex.acquire();
     }
 
-    // let rugcheckScore: number = -1;
-    // if (this.config.rugcheckXyzCheck) {
-    //   try {
-    //     const axiosReponse = await axios.get(
-    //       `https://api.rugcheck.xyz/v1/tokens/${poolState.baseMint.toString()}/report`,
-    //     );
-    //     const rugcheckReport: RugcheckXyzReport = axiosReponse.data;
-    //     rugcheckScore = rugcheckReport.score;
-    //     if (rugcheckScore > this.config.rugcheckXyzMaxScore) {
-    //       logger.info(
-    //         { mint: poolState.baseMint.toString(), rugcheckScore },
-    //         `Skipping buy because token has a high rugcheck.xyz score`,
-    //       );
-    //       return;
-    //     }
-    //   } catch (error) {
-    //     logger.info(
-    //       { mint: poolState.baseMint.toString() },
-    //       `Error fetching rugcheck.xyz report. Ignoring rugcheck threshold score check.`,
-    //     );
-    //   }
-    // }
+    let rugcheckScore: number = -1;
+    if (this.config.rugcheckXyzCheck) {
+      try {
+        const axiosReponse = await axios.get(
+          `https://api.rugcheck.xyz/v1/tokens/${poolState.baseMint.toString()}/report`,
+        );
+        const rugcheckReport: RugcheckXyzReport = axiosReponse.data;
+        rugcheckScore = rugcheckReport.score;
+        if (rugcheckScore > this.config.rugcheckXyzMaxScore) {
+          logger.debug(
+            { mint: poolState.baseMint.toString(), rugcheckScore },
+            `Skipping buy because token has a high rugcheck.xyz score`,
+          );
+          return;
+        }
+      } catch (error) {
+        logger.info(
+          { mint: poolState.baseMint.toString() },
+          `Error fetching rugcheck.xyz report. Ignoring rugcheck threshold score check.`,
+        );
+      }
+    }
 
-    // logger.info({ mint: poolState.baseMint.toString(), rugcheckScore }, `Rugcheck score is ok. Continuing...`);
+    logger.debug({ mint: poolState.baseMint.toString(), rugcheckScore }, `Rugcheck score is ok. Continuing...`);
 
     try {
       const [market, mintAta] = await Promise.all([
