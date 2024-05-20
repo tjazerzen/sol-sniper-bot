@@ -52,9 +52,10 @@ The transactions are executed on Solana's mainnet-beta network.
 
 #### Fees
 
-- `COMPUTE_UNIT_LIMIT` - Compute limit used to calculate fees.
-- `COMPUTE_UNIT_PRICE` - Compute price used to calculate fees.
-  - This option should not be used with public RPC.
+- `COMPUTE_UNIT_LIMIT` - Compute limit used to calculate fees in microlamports. Expressed in microlamports. By default it is set to 100000 (10e5).
+- `COMPUTE_UNIT_PRICE` - Compute price used to calculate fees in microlamports. Expressed in microlamports. By default it is set to 10e11 (approx 0.01 USD).
+
+What are microlamports: https://solana.com/developers/guides/advanced/how-to-use-priority-fees
 
 #### Buy
 
