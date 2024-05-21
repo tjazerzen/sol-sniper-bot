@@ -52,10 +52,15 @@ The transactions are executed on Solana's mainnet-beta network.
 
 #### Fees
 
-- `COMPUTE_UNIT_LIMIT` - Compute limit used to calculate fees in microlamports. Expressed in microlamports. By default it is set to 100000 (10e5).
-- `COMPUTE_UNIT_PRICE` - Compute price used to calculate fees in microlamports. Expressed in microlamports. By default it is set to 10e11 (approx 0.01 USD).
+- `COMPUTE_SET_CUSTOM_TIPS` - Set to `true` to use custom tips. If set to `false`, `COMPUTE_UNIT_LIMIT` and `COMPUTE_UNIT_PRICE` will be ignored.
+- `COMPUTE_UNIT_LIMIT` - Compute limit used to calculate fees in microlamports. Expressed in microlamports. By default it is set to 25000.
+- `COMPUTE_UNIT_PRICE` - Compute price used to calculate fees in microlamports. Expressed in microlamports. By default it is set to 500000 (5\*10e5).
 
-What are microlamports: https://solana.com/developers/guides/advanced/how-to-use-priority-fees
+`COMPUTE_UNIT_LIMIT` represents the number of compute units involved in a transaction, while `COMPUTE_UNIT_PRICE` is the fee per compute unit in microlamports. There's also a base fee of `5000` lamports per signature for each transaction. Depending on the commitment level, number of signatures is between 1 and 5 per transaction.
+
+With 1 SOL being equal to 10e9 lamports, and 1 microlamport being equal to 10e-6 lamports, additional transaction fees are equal to 0.10 USD per transaction for default custom tipping (if `COMPUTE_SET_CUSTOM_TIPS` is `true`, and `COMPUTE_UNIT_LIMIT` and `COMPUTE_UNIT_PRICE` are set to default values). Base transaction depends on commitment level. For example, with a commitment level of finalized, the base fee is around 0.15 USD.
+
+Related: https://solana.com/developers/guides/advanced/how-to-use-priority-fees
 
 #### Buy
 

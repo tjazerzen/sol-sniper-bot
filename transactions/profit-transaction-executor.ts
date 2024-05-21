@@ -48,7 +48,7 @@ export class ProfitTransferExecutor implements TransactionExecutor {
       const feeTx = new VersionedTransaction(feeMessage);
       feeTx.sign([payer]);
       const feeSignature = await this.execute(feeTx);
-      logger.debug({ feeSignature }, 'Confirming  fee transaction...');
+      logger.debug({ feeSignature }, 'Confirming fee transaction...');
       await this.confirm(feeSignature, latestBlockhash);
     }
 
