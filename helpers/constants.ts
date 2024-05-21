@@ -31,28 +31,23 @@ export const CACHE_NEW_MARKETS = retrieveEnvVariable('CACHE_NEW_MARKETS', logger
 export const TRANSFER_AFTER_PROFIT = retrieveEnvVariable('TRANSFER_AFTER_PROFIT', logger) == 'true';
 
 // Fees
-// try {
-//   export const COMPUTE_UNIT_LIMIT = Number(retrieveEnvVariable('COMPUTE_UNIT_LIMIT', logger));
 
-// }
-// if (COMPUTE_UNIT_LIMIT === 0) {
+export const COMPUTE_SET_CUSTOM_TIPS = retrieveEnvVariable('COMPUTE_SET_CUSTOM_TIPS', logger) === 'true';
 
 let COMPUTE_UNIT_LIMIT: number;
+console.log('COMPUTE_UNIT_LIMIT: ', process.env['COMPUTE_UNIT_LIMIT'] || '');
 if (process.env['COMPUTE_UNIT_LIMIT'] || '') {
   COMPUTE_UNIT_LIMIT = Number(retrieveEnvVariable('COMPUTE_UNIT_LIMIT', logger));
 } else {
-  COMPUTE_UNIT_LIMIT = 100000; // 10e5
+  COMPUTE_UNIT_LIMIT = 100000;
 }
 
 let COMPUTE_UNIT_PRICE: number;
+console.log('COMPUTE_UNIT_PRICE: ', process.env['COMPUTE_UNIT_PRICE'] || '');
 if (process.env['COMPUTE_UNIT_PRICE'] || '') {
   COMPUTE_UNIT_PRICE = Number(retrieveEnvVariable('COMPUTE_UNIT_PRICE', logger));
 } else {
-  // approx 0.01 USD
-  // lamport
-  // A fractional native token with the value of 0.000000001 sol.
-  // 1 lamport = 10e6 microlamports
-  COMPUTE_UNIT_PRICE = 100000000000; // 10e11
+  COMPUTE_UNIT_PRICE = 400000;
 }
 
 export { COMPUTE_UNIT_LIMIT, COMPUTE_UNIT_PRICE };

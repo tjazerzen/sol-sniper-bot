@@ -64,6 +64,7 @@ export interface BotConfig {
   autoSellDelay: number;
   maxBuyRetries: number;
   maxSellRetries: number;
+  setCustomTips: boolean;
   unitLimit: number;
   unitPrice: number;
   takeProfit: boolean;
@@ -400,9 +401,12 @@ export class Bot {
       payerKey: wallet.publicKey,
       recentBlockhash: latestBlockhash.blockhash,
       instructions: [
-        // This is change compared to the original code, because we don't send fixed fee.
-        ComputeBudgetProgram.setComputeUnitPrice({ microLamports: this.config.unitPrice }),
-        ComputeBudgetProgram.setComputeUnitLimit({ units: this.config.unitLimit }),
+        ...(this.config.setCustomTips
+          ? [
+              ComputeBudgetProgram.setComputeUnitPrice({ microLamports: this.config.unitPrice }),
+              ComputeBudgetProgram.setComputeUnitLimit({ units: this.config.unitLimit }),
+            ]
+          : []),
         ...(direction === 'buy'
           ? [
               createAssociatedTokenAccountIdempotentInstruction(

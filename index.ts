@@ -27,6 +27,7 @@ import {
   MAX_SELL_RETRIES,
   AUTO_SELL,
   MAX_BUY_RETRIES,
+  COMPUTE_SET_CUSTOM_TIPS,
   COMPUTE_UNIT_LIMIT,
   COMPUTE_UNIT_PRICE,
   CACHE_NEW_MARKETS,
@@ -60,8 +61,11 @@ function printDetails(wallet: Keypair, quoteToken: Token, bot: Bot) {
   logger.info('- Bot -');
 
   logger.info(`Transfer after profit: ${TRANSFER_AFTER_PROFIT}`);
-  logger.info(`Compute Unit limit: ${botConfig.unitLimit}`);
-  logger.info(`Compute Unit price (micro lamports): ${botConfig.unitPrice}`);
+  logger.info(`Set custom tips for transactions: ${botConfig.setCustomTips}`);
+  if (botConfig.setCustomTips) {
+    logger.info(`Compute Unit limit: ${botConfig.unitLimit}`);
+    logger.info(`Compute Unit price (micro lamports): ${botConfig.unitPrice}`);
+  }
 
   logger.info(`Single token at the time: ${botConfig.oneTokenAtATime}`);
   logger.info(`Pre load existing markets: ${PRE_LOAD_EXISTING_MARKETS}`);
@@ -128,6 +132,7 @@ const runListener = async () => {
     autoSellDelay: AUTO_SELL_DELAY,
     maxSellRetries: MAX_SELL_RETRIES,
     maxBuyRetries: MAX_BUY_RETRIES,
+    setCustomTips: COMPUTE_SET_CUSTOM_TIPS,
     unitLimit: COMPUTE_UNIT_LIMIT,
     unitPrice: COMPUTE_UNIT_PRICE,
     takeProfit: TAKE_PROFIT,
