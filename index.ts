@@ -23,6 +23,8 @@ import {
   QUOTE_AMOUNT,
   PRIVATE_KEY,
   ONE_TOKEN_AT_A_TIME,
+  PRICE_CHECK_DURATION,
+  PRICE_CHECK_INTERVAL,
   AUTO_SELL_DELAY,
   MAX_SELL_RETRIES,
   AUTO_SELL,
@@ -71,6 +73,10 @@ function printDetails(wallet: Keypair, quoteToken: Token, bot: Bot) {
   logger.info(`Pre load existing markets: ${PRE_LOAD_EXISTING_MARKETS}`);
   logger.info(`Cache new markets: ${CACHE_NEW_MARKETS}`);
   logger.info(`Log level: ${LOG_LEVEL}`);
+
+  logger.info('- Price check -');
+  logger.info(`Price check duration: ${botConfig.priceCheckDuration} ms`);
+  logger.info(`Price check interval: ${botConfig.priceCheckInterval} ms`);
 
   logger.info('- Buy -');
   logger.info(`Buy amount: ${botConfig.quoteAmount.toFixed()} ${botConfig.quoteToken.name}`);
@@ -130,6 +136,8 @@ const runListener = async () => {
     oneTokenAtATime: ONE_TOKEN_AT_A_TIME,
     autoSell: AUTO_SELL,
     autoSellDelay: AUTO_SELL_DELAY,
+    priceCheckDuration: PRICE_CHECK_DURATION,
+    priceCheckInterval: PRICE_CHECK_INTERVAL,
     maxSellRetries: MAX_SELL_RETRIES,
     maxBuyRetries: MAX_BUY_RETRIES,
     setCustomTips: COMPUTE_SET_CUSTOM_TIPS,
