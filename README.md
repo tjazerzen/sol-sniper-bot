@@ -71,6 +71,11 @@ Related: https://solana.com/developers/guides/advanced/how-to-use-priority-fees
 
 #### Sell
 
+**Price check params**
+
+- `PRICE_CHECK_INTERVAL` - Interval in milliseconds to check the price of the token. If set to `0`, the price will not be checked at all.
+- `PRICE_CHECK_DURATION` - Duration in milliseconds to check the price of the token. The total amount of checks will be equal to `PRICE_CHECK_DURATION / PRICE_CHECK_INTERVAL`. If set to `0`, the price will not be checked at all.
+
 **General sell params**
 
 - `MAX_SELL_RETRIES` - Maximum number of retries for selling a token.

@@ -60,6 +60,8 @@ export interface BotConfig {
   quoteAmount: TokenAmount;
   quoteAta: PublicKey;
   oneTokenAtATime: boolean;
+  priceCheckDuration: number;
+  priceCheckInterval: number;
   autoSell: boolean;
   autoSellDelay: number;
   maxBuyRetries: number;
@@ -440,6 +442,11 @@ export class Bot {
     poolKeys: LiquidityPoolKeysV4,
     profitGainPercentage: number,
   ): Promise<PriceMatchResponse> {
+    if (this.config.priceCheckDuration === 0 || this.config.priceCheckInterval === 0) {
+      return {
+        action: 'no-sell',
+      };
+    }
     const profitFraction = this.config.quoteAmount.mul(profitGainPercentage).numerator.div(new BN(100));
     const profitAmount = new TokenAmount(this.config.quoteToken, profitFraction, true);
     const takeProfit = this.config.quoteAmount.add(profitAmount);
@@ -447,34 +454,43 @@ export class Bot {
     const lossAmount = new TokenAmount(this.config.quoteToken, lossFraction, true);
     const stopLoss = this.config.quoteAmount.subtract(lossAmount);
     const slippage = new Percent(this.config.sellSlippage, 100);
-    try {
-      const poolInfo = await Liquidity.fetchInfo({
-        connection: this.connection,
-        poolKeys,
-      });
-      const amountOut = Liquidity.computeAmountOut({
-        poolKeys,
-        poolInfo,
-        amountIn: amountIn,
-        currencyOut: this.config.quoteToken,
-        slippage,
-      }).amountOut;
-      logger.debug(
-        { mint: poolKeys.baseMint.toString() },
-        `Take profit: ${takeProfit.toFixed()} | Stop loss: ${stopLoss.toFixed()} | Current: ${amountOut.toFixed()}`,
-      );
-      if (amountOut.lt(stopLoss) && this.config.stopLoss > 0) {
-        return { action: 'sell', reason: 'stopLoss', amountOut };
+
+    let timesChecked = 0;
+    const timesToCheck = this.config.priceCheckDuration / this.config.priceCheckInterval;
+
+    do {
+      try {
+        const poolInfo = await Liquidity.fetchInfo({
+          connection: this.connection,
+          poolKeys,
+        });
+        const amountOut = Liquidity.computeAmountOut({
+          poolKeys,
+          poolInfo,
+          amountIn: amountIn,
+          currencyOut: this.config.quoteToken,
+          slippage,
+        }).amountOut;
+        logger.debug(
+          { mint: poolKeys.baseMint.toString() },
+          `Take profit: ${takeProfit.toFixed()} | Stop loss: ${stopLoss.toFixed()} | Current: ${amountOut.toFixed()}`,
+        );
+        if (amountOut.lt(stopLoss) && this.config.stopLoss > 0) {
+          return { action: 'sell', reason: 'stopLoss', amountOut };
+        }
+        if (amountOut.gt(takeProfit) && this.config.takeProfit) {
+          // Calculate the profit amount
+          const profit = amountOut.sub(this.config.quoteAmount);
+          // const tokenAmount =
+          return { action: 'sell', reason: 'takeProfit', profit, amountOut };
+        }
+      } catch (e) {
+        logger.trace({ mint: poolKeys.baseMint.toString(), e }, `Failed to check token price`);
+      } finally {
+        timesChecked++;
       }
-      if (amountOut.gt(takeProfit) && this.config.takeProfit) {
-        // Calculate the profit amount
-        const profit = amountOut.sub(this.config.quoteAmount);
-        // const tokenAmount =
-        return { action: 'sell', reason: 'takeProfit', profit, amountOut };
-      }
-    } catch (e) {
-      logger.trace({ mint: poolKeys.baseMint.toString(), e }, `Failed to check token price`);
-    }
+    } while (timesChecked++ < timesToCheck);
+
     return { action: 'no-sell' };
   }
 }

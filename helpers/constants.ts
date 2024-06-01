@@ -60,6 +60,10 @@ export const BUY_SLIPPAGE = Number(retrieveEnvVariable('BUY_SLIPPAGE', logger));
 
 // Sell
 
+// Price check parameters
+export const PRICE_CHECK_INTERVAL = Number(retrieveEnvVariable('PRICE_CHECK_INTERVAL', logger));
+export const PRICE_CHECK_DURATION = Number(retrieveEnvVariable('PRICE_CHECK_DURATION', logger));
+
 // General sell parameters
 export const MAX_SELL_RETRIES = Number(retrieveEnvVariable('MAX_SELL_RETRIES', logger));
 export const STOP_LOSS = Number(retrieveEnvVariable('STOP_LOSS', logger));
